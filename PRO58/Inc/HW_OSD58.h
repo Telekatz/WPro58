@@ -10,6 +10,8 @@
 
 #ifdef OSD58
 
+#define OSD58_REV_B
+
 #define RECEIVER_SW_Pin                     GPIO_PIN_4
 #define RECEIVER_SW_GPIO_Port               GPIOA
 #define RSSI_A_ADC_Pin                      GPIO_PIN_0
@@ -35,10 +37,17 @@
 
 #define BUTTON_DOWN_Pin                     GPIO_PIN_12
 #define BUTTON_DOWN_GPIO_Port               GPIOB
-#define BUTTON_MODE_Pin                     GPIO_PIN_11
-#define BUTTON_MODE_GPIO_Port               GPIOA
-#define BUTTON_UP_Pin                       GPIO_PIN_12
-#define BUTTON_UP_GPIO_Port                 GPIOA
+#ifdef OSD58_REV_B
+#define BUTTON_MODE_Pin                         GPIO_PIN_0
+#define BUTTON_MODE_GPIO_Port                   GPIOB
+#define BUTTON_UP_Pin                           GPIO_PIN_4
+#define BUTTON_UP_GPIO_Port                     GPIOB
+#else
+#define BUTTON_MODE_Pin                         GPIO_PIN_11
+#define BUTTON_MODE_GPIO_Port                   GPIOA
+#define BUTTON_UP_Pin                           GPIO_PIN_12
+#define BUTTON_UP_GPIO_Port                     GPIOA
+#endif
 
 #define FS_PIN_EB0_Pin                      GPIO_PIN_8
 #define FS_PIN_EB0_GPIO_Port                GPIOA
