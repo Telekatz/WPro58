@@ -11,6 +11,7 @@
 #include "state_settings_callsign.h"
 #include "state_settings_favourites.h"
 #include "state_settings_OSD.h"
+#include "state_settings_OSD_adjust.h"
 #include "state_favourite_screen.h"
 
 #include "ui.h"
@@ -120,6 +121,7 @@ namespace StateMachine {
             STATE_FACTORY(State::SETTINGS_FAVOURITES, SettingsFavouritesStateHandler);
 #ifdef USE_OSD
             STATE_FACTORY(State::SETTINGS_OSD, SettingsOSDStateHandler);
+            STATE_FACTORY(State::SETTINGS_OSD_ADJUST, SettingsOSDAdjustStateHandler);
 #endif
 
             default:

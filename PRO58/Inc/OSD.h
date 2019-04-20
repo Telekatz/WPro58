@@ -27,6 +27,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef USE_OSD
 
+#define FIRST_LINE_MIN              20
+#define FIRST_LINE_MAX              50
+#define FIRST_COL_MIN               0
+#define FIRST_COL_MAX               6
+
 namespace OSD {
 
     enum class syncModes : uint8_t {
@@ -47,6 +52,7 @@ namespace OSD {
 
     void setSyncMode(syncModes mode);
     void init(void);
+    void reinit(uint8_t new_firstLine, uint8_t new_firstCol);
     void clear(void);
     void print(uint8_t x, uint8_t y, const char *str);
     void print(uint8_t x, uint8_t y, uint8_t c);

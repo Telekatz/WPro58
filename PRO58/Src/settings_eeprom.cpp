@@ -88,6 +88,18 @@ void EepromSettings::initDefaults() {
 	vbatWarning = WARNING_VOLTAGE;
 	vbatCritical = CRITICAL_VOLTAGE;
 #endif
+
+
+#ifdef USE_OSD
+    OSDEnabled = true;
+    OSDShowRssi = true;
+    OSDShowChannel = true;
+    OSDShowFrequency = true;
+    OSDDefaultMode = OSD::videoModes::PAL;
+    OSDFirstLine = FIRST_LINE_MIN+15;
+    OSDFirstCol = FIRST_COL_MIN+3;
+#endif
+
 	char sign[CALLSIGN_LEN + 1] = CALLSIGN_DEF;
 	memcpy(callsign, sign, CALLSIGN_LEN);
 

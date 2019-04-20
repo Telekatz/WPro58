@@ -44,10 +44,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "OSD.h"
 #include "OSD_font.h"
 
-#define FIRST_LINE                  41  //This should become a setting to adjust to used goggles/monitor
 #define OSD_ROWS                    6
 #define OSD_COLUMNS                 18
-#define LINEBUFFER_SIZE             72
+#define LINEBUFFER_OUT_SIZE         35
+#define LINEBUFFER_SIZE             40
 #define OSD_LCDWIDTH                128
 #define OSD_LCDHEIGHT               64
 #define FONT_HEIGHT                 18
@@ -80,6 +80,7 @@ namespace OSD {
 
     static volatile uint16_t line = 0;
     static volatile uint16_t firstLine = 625;
+    static volatile uint8_t firstCol = 3;
     static volatile uint16_t lastLine = 625;
     static volatile uint16_t firstLineLCD = 625;
     static volatile uint16_t lastLineLCD = 625;
@@ -184,7 +185,7 @@ namespace OSD {
             DMA_Channel_TypeDef* dmaSpiA = OSD_DMA_SPI_A;
 
             dmaSpiA->CCR = 0;
-            dmaSpiA->CNDTR = 33;
+            dmaSpiA->CNDTR = LINEBUFFER_OUT_SIZE;
             dmaSpiA->CMAR = (uint32_t)linebufferA[cBuffer];
             uint32_t ccr = dmaSpiA->CCR | DMA_CCR_EN;
 
@@ -192,7 +193,7 @@ namespace OSD {
             DMA_Channel_TypeDef* dmaSpiB = OSD_DMA_SPI_B;
 
             dmaSpiB->CCR = 0;
-            dmaSpiB->CNDTR = 33;
+            dmaSpiB->CNDTR = LINEBUFFER_OUT_SIZE;
             dmaSpiB->CMAR = (uint32_t)linebufferB[cBuffer];
 
             dmaSpiB->CCR = ccr;
@@ -202,11 +203,11 @@ namespace OSD {
             cBuffer = 1 - cBuffer;
 
             if( line < lastLine) {
-                uint16_t fontRow = ((line - FIRST_LINE) % FONT_HEIGHT);
+                uint16_t fontRow = ((line - firstLine) % FONT_HEIGHT);
                 uint32u16u8_t ch1 = {0};
                 uint32u16u8_t ch2 = {0};
-                uint16_t row = (line - FIRST_LINE) / FONT_HEIGHT;
-                uint16_t buf = 3;
+                uint16_t row = (line - firstLine) / FONT_HEIGHT;
+                uint16_t buf = firstCol;
                 uint16_t screenBufferCounter = row * OSD_COLUMNS;
                 uint8_t char1 = 0;
                 uint8_t char2 = 0;
@@ -277,6 +278,8 @@ namespace OSD {
                         buf +=3;
                     }
                 }
+                linebufferB[cBuffer][LINEBUFFER_OUT_SIZE-1]   = linebufferB[cBuffer][LINEBUFFER_SIZE-1];
+                linebufferA[cBuffer][LINEBUFFER_OUT_SIZE-1]   = linebufferA[cBuffer][LINEBUFFER_SIZE-1];
                 lineCounter++;
 
             } else {
@@ -595,9 +598,35 @@ namespace OSD {
 
     }
 
+    void reinit(uint8_t new_firstLine, uint8_t new_firstCol)
+    {
+        firstLine = new_firstLine;
+        if(firstLine < FIRST_LINE_MIN)
+            firstLine = FIRST_LINE_MIN;
+        if(firstLine > FIRST_LINE_MAX)
+            firstLine = FIRST_LINE_MAX;
+
+        firstCol = new_firstCol;
+        if(firstCol < FIRST_COL_MIN)
+            firstCol = FIRST_COL_MIN;
+        if(firstCol > FIRST_COL_MAX)
+            firstCol = FIRST_COL_MAX;
+    }
+
     void init(void)
     {
-        firstLine = FIRST_LINE;
+        firstLine = EepromSettings.OSDFirstLine;
+        if(firstLine < FIRST_LINE_MIN)
+            firstLine = FIRST_LINE_MIN;
+        if(firstLine > FIRST_LINE_MAX)
+            firstLine = FIRST_LINE_MAX;
+
+        firstCol = EepromSettings.OSDFirstCol;
+        if(firstCol < FIRST_COL_MIN)
+            firstCol = FIRST_COL_MIN;
+        if(firstCol > FIRST_COL_MAX)
+            firstCol = FIRST_COL_MAX;
+
         videoMode = EepromSettings.OSDDefaultMode;
 
         enableLCD(false);
@@ -748,7 +777,7 @@ namespace OSD {
 
     void testScreen(void) {
         for(uint16_t x = 0; x < VIDEO_BUFFER_CHARS; x++ ) {
-            screenBuffer[x] = x & 0xff;
+            screenBuffer[x] = (x+34) & 0xff;
         }
     }
 

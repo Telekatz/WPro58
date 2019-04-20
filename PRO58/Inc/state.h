@@ -19,7 +19,8 @@ namespace StateMachine {
         SETTINGS_RSSI,
 		SETTINGS_CALLSIGN,
 		SETTINGS_FAVOURITES,
-		SETTINGS_OSD
+		SETTINGS_OSD,
+		SETTINGS_OSD_ADJUST
     };
 
     class StateHandler {

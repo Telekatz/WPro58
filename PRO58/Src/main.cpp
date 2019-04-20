@@ -143,11 +143,6 @@ int main(void) {
 	HAL_GPIO_WritePin(SPI_CLOCK_GPIO_Port, SPI_CLOCK_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(SPI_DATA_GPIO_Port, SPI_DATA_Pin, GPIO_PIN_RESET);
 
-#ifdef USE_OSD
-    MX_TIM1_Init();
-    spi_init();
-    OSD::init();
-#endif
 
 #ifdef USE_EXTERNAL_EEPROM
 	I2C_Reset(&hi2c2, MX_I2C2_Init);
@@ -158,6 +153,11 @@ int main(void) {
 	EepromSettings.load();
 #endif
 
+#ifdef USE_OSD
+    MX_TIM1_Init();
+    spi_init();
+    OSD::init();
+#endif
 
 #ifndef HB5808
 	//I2C_Reset breaks stuff...

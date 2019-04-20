@@ -52,6 +52,8 @@ struct EepromSettings {
     uint8_t OSDShowChannel;
     uint8_t OSDShowFrequency;
     OSD::videoModes OSDDefaultMode;
+    uint8_t OSDFirstLine;
+    uint8_t OSDFirstCol;
 #endif
 
     void update();
@@ -114,7 +116,9 @@ const struct {
     uint8_t OSDShowRssi = true;
     uint8_t OSDShowChannel = true;
     uint8_t OSDShowFrequency = true;
-    OSD::videoModes OSDVideoMode = OSD::videoModes::PAL;
+    OSD::videoModes OSDDefaultMode = OSD::videoModes::PAL;
+    uint8_t OSDFirstLine = FIRST_LINE_MIN+15;
+    uint8_t OSDFirstCol = FIRST_COL_MIN+3;
 #endif
 
 } EepromDefaults;

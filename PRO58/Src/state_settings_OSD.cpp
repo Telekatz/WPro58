@@ -15,6 +15,7 @@ static void OSD2MenuHandler(Ui::SettingsMenuItem* item);
 static void OSD3MenuHandler(Ui::SettingsMenuItem* item);
 static void OSD4MenuHandler(Ui::SettingsMenuItem* item);
 static void OSD5MenuHandler(Ui::SettingsMenuItem* item);
+static void OSD6MenuHandler(Ui::SettingsMenuItem* item);
 static void exitMenuHandler(Ui::SettingsMenuItem* item);
 
 void StateMachine::SettingsOSDStateHandler::onEnter() {
@@ -34,6 +35,8 @@ void StateMachine::SettingsOSDStateHandler::onEnter() {
 
     const char* OSD5Value = (EepromSettings.OSDDefaultMode == OSD::videoModes::PAL ? "PAL" : "NTSC");
     this->menu.addItem("Default Mode", OSD5MenuHandler, OSD5Value);
+
+    this->menu.addItem("Screen adjust", OSD6MenuHandler);
 
 	this->menu.addItem("Exit", exitMenuHandler);
 }
@@ -137,6 +140,10 @@ static void OSD5MenuHandler(Ui::SettingsMenuItem* item){
     EepromSettings.markDirty();
     const char* buzzerValue = (EepromSettings.OSDDefaultMode == OSD::videoModes::PAL ? "PAL" : "NTSC");
     item->value = buzzerValue;
+}
+
+static void OSD6MenuHandler(Ui::SettingsMenuItem* item){
+    StateMachine::switchState(StateMachine::State::SETTINGS_OSD_ADJUST);
 }
 
 static void exitMenuHandler(Ui::SettingsMenuItem* item){
