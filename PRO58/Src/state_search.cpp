@@ -88,7 +88,9 @@ void SearchStateHandler::onUpdateAuto() {
 				orderedChanelIndex = 0;
 
 			Receiver::setChannel(orderedChanelIndex);
-
+#ifdef USE_OSD
+			OSD::setSyncMode(OSD::syncModes::automatic, 10, OSD::syncModes::external);
+#endif
 			forceNext = false;
 		}
 	}
@@ -134,8 +136,14 @@ void SearchStateHandler::onButtonChange(
 
 		if (button == Button::UP) {
 			orderedChanelIndex += 1;
+#ifdef USE_OSD
+			OSD::setSyncMode(OSD::syncModes::automatic, 10, OSD::syncModes::external);
+#endif
 		} else if (button == Button::DOWN) {
 			orderedChanelIndex -= 1;
+#ifdef USE_OSD
+			OSD::setSyncMode(OSD::syncModes::automatic, 10, OSD::syncModes::external);
+#endif
 		}
 
 		if (orderedChanelIndex == 255)
@@ -144,6 +152,7 @@ void SearchStateHandler::onButtonChange(
 			orderedChanelIndex = 0;
 
 		this->setAndSaveChannel();
+
 		channelSeekTimer.reset();
     }
 }

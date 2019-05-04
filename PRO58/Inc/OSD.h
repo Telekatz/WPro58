@@ -46,11 +46,19 @@ namespace OSD {
         NTSC
     };
 
+    enum class syncStates : uint8_t {
+        internalSync,
+        externalSyncFound,
+        externalSync,
+        externalSyncLost
+    };
+
     void vsync_callback(void);
     void csync_callback(void);
     void TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
     void setSyncMode(syncModes mode);
+    void setSyncMode(syncModes mode, uint8_t timeout, syncModes nextMode);
     void init(void);
     void reinit(uint8_t new_firstLine, uint8_t new_firstCol);
     void clear(void);

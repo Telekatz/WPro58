@@ -86,7 +86,7 @@ namespace OSD {
     static volatile uint16_t lastLineLCD = 625;
     static volatile uint16_t lineCounter = 0;
     static volatile uint16_t internalLine = 0;
-    static volatile uint8_t videoConnect = 0;
+    static volatile syncStates syncState = syncStates::internalSync;
     static volatile videoModes videoMode = videoModes::PAL;
 
     static volatile uint8_t ntscSync = 4;
@@ -100,6 +100,8 @@ namespace OSD {
     uint8_t linebufferB[2][LINEBUFFER_SIZE] = {0};
 
     static syncModes syncMode;
+    static uint8_t syncModeTimeout;
+    static syncModes syncModeNext;
 
 #ifdef DEBUG_OUT
     static volatile uint16_t debug_line = 0;
@@ -123,7 +125,7 @@ namespace OSD {
         uint32_t difTick = actTick - oldTick;
 
 
-        if(!videoConnect) {
+        if(syncState == syncStates::internalSync) {
             if (difTick > 15 && difTick < 18) {
                 if(ntscSync) {
                     ntscSync--;
@@ -155,9 +157,9 @@ namespace OSD {
                     lostSync++;
                 }
             }
-            if(!videoConnect) {
+            if(syncState == syncStates::internalSync) {
                 videoMode = videoModes::NTSC;
-                videoConnect = 1;
+                syncState = syncStates::externalSyncFound;
             }
         }
 
@@ -169,9 +171,9 @@ namespace OSD {
                     lostSync++;
                 }
             }
-            if(!videoConnect) {
+            if(syncState == syncStates::internalSync) {
                 videoMode = videoModes::PAL;
-                videoConnect = 1;
+                syncState = syncStates::externalSyncFound;
             }
         }
 
@@ -212,7 +214,7 @@ namespace OSD {
                 uint8_t char1 = 0;
                 uint8_t char2 = 0;
 
-                if(videoConnect == 2) {
+                if(syncState == syncStates::externalSync) {
                     for(unsigned col=0; col<OSD_COLUMNS; col +=2) {
                         char1 = screenBuffer[screenBufferCounter++];
                         char2 = screenBuffer[screenBufferCounter++];
@@ -289,7 +291,7 @@ namespace OSD {
 #else
                 uint8_t alpha = 0x00;
 #endif
-                if(videoConnect == 2) {
+                if(syncState == syncStates::externalSync ) {
                     alpha=0x00;
                 }
                 while(buf--) {
@@ -298,6 +300,7 @@ namespace OSD {
                     linebufferA[1][buf] = alpha;
                     linebufferB[1][buf] = 0;
                 }
+
                 lineCounter = 0;
             }
         }
@@ -326,7 +329,7 @@ namespace OSD {
             if( line < lastLineLCD) {;
                 uint16_t buf = 9;
 
-                if(videoConnect == 2) {
+                if(syncState == syncStates::externalSync) {
                     uint8_t value;
                     for(unsigned col=0; col<16; col++) {
                         value = OSDbuffer[lineCounter * 16  + col];
@@ -356,7 +359,7 @@ namespace OSD {
 #else
                 uint8_t alpha = 0x00;
 #endif
-                if(videoConnect == 2) {
+                if(syncState == syncStates::externalSync) {
                     alpha=0x00;
                 }
                 while(buf--) {
@@ -371,7 +374,7 @@ namespace OSD {
 
         if(line == 260) {
             SPI1->CR1 &= ~(SPI_CR1_SPE);
-        }
+            }
 
         if(line == 265) {
             SPI1->CR1 |= SPI_CR1_SPE;
@@ -389,17 +392,17 @@ namespace OSD {
         uint8_t buf = LINEBUFFER_SIZE;
 
 #ifdef DEBUG_OUT
-        screenBuffer[24] = '0'+videoConnect;
+        screenBuffer[24] = '0'+syncState;
         screenBuffer[26] = '0'+palSync;
         screenBuffer[28] = '0'+ntscSync;
         screenBuffer[30] = '0'+lostSync;
 #endif
 
-        switch(videoConnect){
-        case 0:
+        switch(syncState){
+        case syncStates::internalSync:
             break;
 
-        case 1:
+        case  syncStates::externalSyncFound:
 #ifdef OSD_CSYNC_IRQ
             HAL_NVIC_EnableIRQ(OSD_CSYNC_IRQ);
 #endif
@@ -410,11 +413,11 @@ namespace OSD {
                 TIM1->ARR = 508;
             }
             internalLine = line;
-            videoConnect++;
+            syncState = syncStates::externalSync;
             lostSync = LOSTSYNC_COUNTER;
             return;
 
-        case 2:
+        case syncStates::externalSync:
             internalLine++;
             if(internalLine == 7) {
                 internalLine += 6;
@@ -436,11 +439,11 @@ namespace OSD {
                 internalLine = 1;
             }
             if(!lostSync) {
-                videoConnect++;
+                syncState = syncStates::externalSyncLost;
             }
             return;
 
-        case 3:
+        case syncStates::externalSyncLost:
 #ifdef OSD_CSYNC_IRQ
             HAL_NVIC_DisableIRQ(OSD_CSYNC_IRQ);
 #endif
@@ -452,7 +455,7 @@ namespace OSD {
             dmaSpiA->CMAR = (uint32_t)linebufferA[0];
             dmaSpiA->CCR |= DMA_CCR_EN;
             
-            videoConnect = 0;
+            syncState = syncStates::internalSync;
             palSync = SYNC_COUNTER;
             ntscSync = SYNC_COUNTER;
 #ifdef DEBUG_OUT
@@ -534,6 +537,12 @@ namespace OSD {
 
     }
 
+    void setSyncMode(syncModes mode, uint8_t timeout, syncModes nextMode) {
+        setSyncMode(mode);
+        syncModeNext = nextMode;
+        syncModeTimeout = timeout;
+    }
+
     void setSyncMode(syncModes mode) {
 
         if(!EepromSettings.OSDEnabled) {
@@ -556,7 +565,7 @@ namespace OSD {
             GPIO_Reinit(OSD_SYNC_OUT_PORT, OSD_SYNC_OUT_PIN, GPIO_MODE_AF_PP);
             GPIO_Reinit(OSD_SPI_A_PORT, OSD_SPI_A_PIN, GPIO_MODE_AF_PP);
 #endif
-            videoConnect = 2;
+            syncState = syncStates::externalSync;
             break;
         case syncModes::external:
 #ifndef OSD_SPI_B
@@ -570,7 +579,7 @@ namespace OSD {
 #endif
             ENABLE_VSYNC_IRQ();
             TIM1->OSD_TIM_CCR = 0;
-            videoConnect = 2;
+            syncState = syncStates::externalSync;
             syncMode = syncModes::external;
             break;
         case syncModes::internal:
@@ -580,7 +589,7 @@ namespace OSD {
             GPIO_Reinit(OSD_SPI_A_PORT, OSD_SPI_A_PIN, GPIO_MODE_AF_PP);
 #endif
             DISABLE_VSYNC_IRQ();
-            videoConnect = 2;
+            syncState = syncStates::externalSync;
             syncMode = syncModes::internal;
             break;
         case syncModes::off:
@@ -591,7 +600,7 @@ namespace OSD {
 #endif
             DISABLE_VSYNC_IRQ();
             TIM1->OSD_TIM_CCR = 0;
-            videoConnect = 2;
+            syncState = syncStates::externalSync;
             syncMode = syncModes::off;
             break;
         }
@@ -724,30 +733,22 @@ namespace OSD {
 
             if(!show[i]) {
                 fontData[0] = 0x00000000;
-        }
+            }
             if(i==(uint8_t)Receiver::activeReceiver) {
                 fontData[2]=fontData[1];
-    }
+            }
 
-            fontRow[0] = (fontData[0] & 0xFFFC0000);
-            fontRow[1] = (fontData[0] & 0xFFFC0000) | (fontData[1]>>16 & 0x0000FFFC);
-            fontRow[2] = (fontData[0] & 0xFFFC0000) | (fontData[2]>>16 & 0x0000FFFC);
-            ramFontdata[0 * (FONT_HEIGHT) + 2 + i * 7] = fontRow[0];
-            ramFontdata[0 * (FONT_HEIGHT) + 3 + i * 7] = fontRow[1];
-            ramFontdata[0 * (FONT_HEIGHT) + 4 + i * 7] = fontRow[2];
-            ramFontdata[0 * (FONT_HEIGHT) + 5 + i * 7] = fontRow[2];
-            ramFontdata[0 * (FONT_HEIGHT) + 6 + i * 7] = fontRow[1];
-            ramFontdata[0 * (FONT_HEIGHT) + 7 + i * 7] = fontRow[0];
-
-            fontRow[0] = (fontData[0]<<12 & 0xFFFC0000);
-            fontRow[1] = (fontData[0]<<12 & 0xFFFC0000) | (fontData[1]>>4 & 0x0000FFFC);
-            fontRow[2] = (fontData[0]<<12 & 0xFFFC0000) | (fontData[2]>>4 & 0x0000FFFC);
-            ramFontdata[1 * (FONT_HEIGHT) + 2 + i * 7] = fontRow[0];
-            ramFontdata[1 * (FONT_HEIGHT) + 3 + i * 7] = fontRow[1];
-            ramFontdata[1 * (FONT_HEIGHT) + 4 + i * 7] = fontRow[2];
-            ramFontdata[1 * (FONT_HEIGHT) + 5 + i * 7] = fontRow[2];
-            ramFontdata[1 * (FONT_HEIGHT) + 6 + i * 7] = fontRow[1];
-            ramFontdata[1 * (FONT_HEIGHT) + 7 + i * 7] = fontRow[0];
+            for(uint8_t x=0; x<2; x++) {
+                fontRow[0] = (fontData[0]<<(12*x) & 0xFFFC0000);
+                fontRow[1] = (fontData[0]<<(12*x) & 0xFFFC0000) | (fontData[1]>>(16-12*x) & 0x0000FFFC);
+                fontRow[2] = (fontData[0]<<(12*x) & 0xFFFC0000) | (fontData[2]>>(16-12*x) & 0x0000FFFC);
+                ramFontdata[x * (FONT_HEIGHT) + 2 + i * 7] = fontRow[0];
+                ramFontdata[x * (FONT_HEIGHT) + 3 + i * 7] = fontRow[1];
+                ramFontdata[x * (FONT_HEIGHT) + 4 + i * 7] = fontRow[2];
+                ramFontdata[x * (FONT_HEIGHT) + 5 + i * 7] = fontRow[2];
+                ramFontdata[x * (FONT_HEIGHT) + 6 + i * 7] = fontRow[1];
+                ramFontdata[x * (FONT_HEIGHT) + 7 + i * 7] = fontRow[0];
+            }
 
         }
         screenBuffer[pos++] = RAM_FONT_START;
@@ -810,6 +811,16 @@ namespace OSD {
 
         if((HAL_GetTick() - lastTick) > 100) {
             lastTick = HAL_GetTick();
+
+            if(syncModeTimeout) {
+                if(syncModeTimeout > 1) {
+                    syncModeTimeout--;
+                } else {
+                    syncModeTimeout=0;
+                    setSyncMode(syncModeNext);
+                }
+            }
+
 #ifdef DEBUG_OUT
             print(1,1, "   ");
             print(1,2 ,"   ");
